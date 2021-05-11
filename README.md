@@ -1,6 +1,6 @@
 # Tagcounter
 
-#### version 0.9.0 no tests
+#### version 1.0.0
 
 ### Installation
 

@@ -19,7 +19,7 @@ class TagCounter:
         self.table_fields = 'date text, site text, uri text, tags text'
         self.connection = None
         self.cursor = None
-        self.load_sc()
+        # self.load_sc()
 
     def __str__(self):
         return f"{vars(self.arguments),}"
