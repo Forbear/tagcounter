@@ -1,6 +1,6 @@
 # Tagcounter
 
-#### version 0.0.5 no GUI
+#### version 0.5.0 no GUI
 
 ### Installation
 

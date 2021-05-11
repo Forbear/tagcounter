@@ -19,6 +19,7 @@ class TagCounter:
         self.table_fields = 'date text, site text, uri text, tags text'
         self.connection = None
         self.cursor = None
+        self.load_sc()
 
     def __str__(self):
         return f"{vars(self.arguments),}"
@@ -77,7 +78,10 @@ class TagCounter:
 
     @property
     def website(self):
-        return self.arguments.website
+        if self.arguments.website in self.__sc:
+            return self.__sc[self.arguments.website]
+        else:
+            return self.arguments.website
 
     @website.setter
     def website(self, website):
@@ -173,8 +177,8 @@ class TagCounter:
         if self.table_exists:
             # For some reason qmark style does not work here.
             query = f"SELECT * FROM {self.table_name}"
-            for match in self.cursor.execute(query):
-                print(match)
+            result = self.cursor.execute(query).fetchall()
+            return '\n'.join(str(result).split(','))
 
     def register_tags(self):
         # Drop current tags before count.
@@ -209,60 +213,66 @@ class TagCounter:
         try:
             with open(self.sc_file, 'r') as f:
                 shortcuts = yaml.load(f, Loader=yaml.FullLoader)
-                self.__sc = shortcuts
+            self.__sc = shortcuts
+            return self.__sc
         except FileNotFoundError:
             print(f"File '{self.sc_file}' was not found. Error.")
             return None
 
     def sc_list(self, *_):
-        print(self.__sc)
+        return self.__sc
 
-    def add_shortcut(self, *args):
-        if args is not None:
-            if len(args) % 2 == 0:
-                k = args[0::2]
-                v = args[1::2]
+    def add_shortcut(self, *_):
+        if self.arguments.command_args is not None:
+            if len(self.arguments.command_args) % 2 == 0:
+                k = self.arguments.command_args[0::2]
+                v = self.arguments.command_args[1::2]
                 new_sc = dict(zip(k, v))
                 with open(self.sc_file, 'a') as f:
                     yaml.dump(new_sc, f)
-            self.load_sc()
+            return self.load_sc()
 
-    def rm_shortcut(self, *args):
-        if args is not None:
+    def rm_shortcut(self, *_):
+        if self.arguments.command_args is not None:
             try:
                 with open(self.sc_file, 'r') as f:
                     sc = yaml.load(f, Loader=yaml.FullLoader)
-                    for k in args:
+                    for k in self.arguments.command_args:
                         del sc[k]
                 with open(self.sc_file, 'w') as f:
                     yaml.dump(sc, f)
+                return self.load_sc()
             except FileNotFoundError:
-                print(f"File '{self.sc_file}' was not found. Error.")
+                return f"File '{self.sc_file}' was not found. Error."
             except KeyError as e:
-                print(f"Shortcut '{e.args[0]}' was not found. Error.")
+                return f"Shortcut '{e.args[0]}' was not found. Error."
 
     def count_and_push(self, *_):
         self.connect()
         self.create_table()
         self.register_tags()
         self.push_to_table()
+        return self.tags
 
     def synthetic(self, *_):
         self.register_tags()
-        print(self.tags)
+        return self.__tags
 
     @property
     def callable(self):
-        return {'sc_list': self.sc_list,
-                'add_sc': self.add_shortcut,
+        return {'add_sc': self.add_shortcut,
                 'rm_sc': self.rm_shortcut,
                 'print_table': self.print_table_content,
                 'exec': self.count_and_push,
-                'reload_sc': self.load_sc,
+                'load_sc': self.load_sc,
                 'synthetic': self.synthetic}
+
+    @staticmethod
+    def get_commands():
+        return 'add_sc', 'rm_sc', 'print_table', 'exec', 'load_sc', 'synthetic'
 
     def execute(self):
         if self.arguments.command in self.callable:
-            self.callable[self.arguments.command]()
+            return self.callable[self.arguments.command]()
         else:
-            print(f"{self.arguments.command} is not valid command.")
+            return f"{self.arguments.command} is not valid command."
